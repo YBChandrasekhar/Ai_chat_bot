@@ -6,4 +6,7 @@ const sessionSchema = new mongoose.Schema({
   messages: [{ type: mongoose.Schema.Types.ObjectId, ref: "Message" }],
 }, { timestamps: true });
 
+// Optimize query performance
+sessionSchema.index({ userId: 1, createdAt: -1 });
+
 module.exports = mongoose.model("Session", sessionSchema);
