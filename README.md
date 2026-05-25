@@ -47,5 +47,5 @@ npm run dev
 - **Backend**: Node.js, Express.js
 - **Database**: MongoDB (Mongoose)
 - **Auth**: JWT
-- **AI**: OpenAI GPT API
+- **AI**: Groq API (llama3-8b-8192)
 - **Real-time**: Socket.io (Day 8)

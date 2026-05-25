@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const { sendMessage, getHistory } = require("../controllers/chatController");
+const protect = require("../middleware/authMiddleware");
 
-// Placeholder — implemented on Day 3
-router.post("/message", (req, res) => res.json({ message: "Chat route - Day 3" }));
+router.post("/message", protect, sendMessage);
+router.get("/history", protect, getHistory);
 
 module.exports = router;
