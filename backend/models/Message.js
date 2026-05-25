@@ -7,4 +7,8 @@ const messageSchema = new mongoose.Schema({
   content: { type: String, required: true },
 }, { timestamps: true });
 
+// Optimize query performance
+messageSchema.index({ sessionId: 1, createdAt: 1 });
+messageSchema.index({ userId: 1 });
+
 module.exports = mongoose.model("Message", messageSchema);
