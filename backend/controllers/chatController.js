@@ -1,6 +1,7 @@
 const { getAIResponse } = require("../services/aiService");
 const Message = require("../models/Message");
 const Session = require("../models/Session");
+const User = require("../models/User");
 
 const sendMessage = async (req, res) => {
   try {
@@ -9,30 +10,28 @@ const sendMessage = async (req, res) => {
 
     if (!content) return res.status(400).json({ message: "Message content required" });
 
-    // Get or create session
+    const user = await User.findById(userId).select("preferences");
+    const category = user?.preferences?.category || "casual";
+
     let session = sessionId
       ? await Session.findById(sessionId)
       : await Session.create({ userId, title: content.slice(0, 30) });
 
     if (!session) return res.status(404).json({ message: "Session not found" });
 
-    // Save user message
     const userMessage = await Message.create({ userId, sessionId: session._id, role: "user", content });
     session.messages.push(userMessage._id);
 
-    // Build conversation history for OpenAI
     const history = await Message.find({ sessionId: session._id }).sort("createdAt");
     const openAIMessages = history.map((m) => ({ role: m.role === "ai" ? "assistant" : "user", content: m.content }));
 
-    // Get AI response
-    const aiContent = await getAIResponse(openAIMessages);
+    const aiContent = await getAIResponse(openAIMessages, category);
 
-    // Save AI message
     const aiMessage = await Message.create({ userId, sessionId: session._id, role: "ai", content: aiContent });
     session.messages.push(aiMessage._id);
     await session.save();
 
-    res.json({ sessionId: session._id, userMessage: userMessage.content, aiMessage: aiContent });
+    res.json({ sessionId: session._id, userMessage: userMessage.content, aiMessage: aiContent, aiMessageId: aiMessage._id });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 type Message = {
   role: "user" | "ai";
   content: string;
+  messageId?: string;
 };
 
 export default function ChatPage() {
@@ -44,8 +45,8 @@ export default function ChatPage() {
       setLoading(isTyping);
     });
 
-    socket.on("aiMessage", ({ content }: { content: string }) => {
-      setMessages((prev) => [...prev, { role: "ai", content }]);
+    socket.on("aiMessage", ({ content, messageId }: { content: string; messageId: string }) => {
+      setMessages((prev) => [...prev, { role: "ai", content, messageId }]);
       setLoading(false);
     });
 
@@ -88,6 +89,7 @@ export default function ChatPage() {
       <div className="px-6 py-4 bg-gray-800 text-white font-semibold text-lg shadow border-b border-gray-700 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <span>🤖 AI Chatbot</span>
+          <button onClick={() => router.push("/settings")} className="text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600">⚙️</button>
           <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`} />
         </div>
         <div className="flex items-center gap-3">
@@ -125,7 +127,7 @@ export default function ChatPage() {
           </div>
         )}
         {messages.map((msg, i) => (
-          <MessageBubble key={i} role={msg.role} content={msg.content} />
+          <MessageBubble key={i} role={msg.role} content={msg.content} messageId={msg.messageId} />
         ))}
         {loading && (
           <div className="flex flex-col items-start mb-4">

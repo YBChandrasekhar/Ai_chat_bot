@@ -18,3 +18,11 @@ export const register = (name: string, email: string, password: string) =>
 
 export const login = (email: string, password: string) =>
   API.post("/auth/login", { email, password });
+
+export const getPreferences = () => API.get("/preferences");
+
+export const updatePreferences = (data: { theme: string; chatbotName: string; category: string }) =>
+  API.put("/preferences", data);
+
+export const rateMessage = (messageId: string, rating: "like" | "dislike") =>
+  API.put(`/preferences/rate/${messageId}`, { rating });

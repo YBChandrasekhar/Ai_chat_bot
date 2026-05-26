@@ -5,9 +5,9 @@ const messageSchema = new mongoose.Schema({
   sessionId: { type: mongoose.Schema.Types.ObjectId, ref: "Session", required: true },
   role: { type: String, enum: ["user", "ai"], required: true },
   content: { type: String, required: true },
+  rating: { type: String, enum: ["like", "dislike", null], default: null },
 }, { timestamps: true });
 
-// Optimize query performance
 messageSchema.index({ sessionId: 1, createdAt: 1 });
 messageSchema.index({ userId: 1 });
 
