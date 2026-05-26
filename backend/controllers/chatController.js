@@ -2,6 +2,7 @@ const { getAIResponse } = require("../services/aiService");
 const Message = require("../models/Message");
 const Session = require("../models/Session");
 const User = require("../models/User");
+const cache = require("../services/cacheService");
 
 const sendMessage = async (req, res) => {
   try {
@@ -22,10 +23,16 @@ const sendMessage = async (req, res) => {
     const userMessage = await Message.create({ userId, sessionId: session._id, role: "user", content });
     session.messages.push(userMessage._id);
 
-    const history = await Message.find({ sessionId: session._id }).sort("createdAt");
-    const openAIMessages = history.map((m) => ({ role: m.role === "ai" ? "assistant" : "user", content: m.content }));
+    // Check cache for repeated query
+    const cacheKey = `${category}:${content.trim().toLowerCase()}`;
+    let aiContent = cache.get(cacheKey);
 
-    const aiContent = await getAIResponse(openAIMessages, category);
+    if (!aiContent) {
+      const history = await Message.find({ sessionId: session._id }).sort("createdAt");
+      const openAIMessages = history.map((m) => ({ role: m.role === "ai" ? "assistant" : "user", content: m.content }));
+      aiContent = await getAIResponse(openAIMessages, category);
+      cache.set(cacheKey, aiContent);
+    }
 
     const aiMessage = await Message.create({ userId, sessionId: session._id, role: "ai", content: aiContent });
     session.messages.push(aiMessage._id);
@@ -39,9 +46,17 @@ const sendMessage = async (req, res) => {
 
 const getHistory = async (req, res) => {
   try {
-    const sessions = await Session.find({ userId: req.user._id })
-      .sort("-createdAt")
-      .populate("messages");
+    const cacheKey = `history:${req.user._id}`;
+    let sessions = cache.get(cacheKey);
+
+    if (!sessions) {
+      sessions = await Session.find({ userId: req.user._id })
+        .sort("-createdAt")
+        .populate("messages")
+        .lean();
+      cache.set(cacheKey, sessions);
+    }
+
     res.json(sessions);
   } catch (err) {
     res.status(500).json({ message: err.message });
