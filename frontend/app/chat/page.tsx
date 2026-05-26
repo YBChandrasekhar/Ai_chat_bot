@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { io, Socket } from "socket.io-client";
 import MessageBubble from "@/components/MessageBubble";
 import ChatInput from "@/components/ChatInput";
-import { sendMessage } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 
 type Message = {
@@ -17,34 +17,55 @@ export default function ChatPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [connected, setConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { user, token, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!token) router.push("/login");
+    if (!token) { router.push("/login"); return; }
+
+    const socket = io("http://localhost:5000", {
+      auth: { token },
+      transports: ["websocket"],
+    });
+
+    socketRef.current = socket;
+
+    socket.on("connect", () => setConnected(true));
+    socket.on("disconnect", () => setConnected(false));
+
+    socket.on("userMessage", ({ sessionId: sid }) => {
+      setSessionId(sid);
+    });
+
+    socket.on("aiTyping", (isTyping: boolean) => {
+      setLoading(isTyping);
+    });
+
+    socket.on("aiMessage", ({ content }: { content: string }) => {
+      setMessages((prev) => [...prev, { role: "ai", content }]);
+      setLoading(false);
+    });
+
+    socket.on("error", ({ message }: { message: string }) => {
+      setError(message);
+      setLoading(false);
+    });
+
+    return () => { socket.disconnect(); };
   }, [token, router]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, loading]);
 
-  const handleSend = async (content: string) => {
+  const handleSend = (content: string) => {
+    if (!socketRef.current || loading) return;
     setError("");
     setMessages((prev) => [...prev, { role: "user", content }]);
-    setLoading(true);
-    try {
-      const res = await sendMessage(content, sessionId ?? undefined);
-      setSessionId(res.data.sessionId);
-      setMessages((prev) => [...prev, { role: "ai", content: res.data.aiMessage }]);
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string } } };
-      const msg = axiosErr?.response?.data?.message || "Something went wrong. Please try again.";
-      setError(msg);
-      setMessages((prev) => prev.slice(0, -1));
-    } finally {
-      setLoading(false);
-    }
+    socketRef.current.emit("sendMessage", { content, sessionId });
   };
 
   const handleNewChat = () => {
@@ -54,6 +75,7 @@ export default function ChatPage() {
   };
 
   const handleLogout = () => {
+    socketRef.current?.disconnect();
     logout();
     router.push("/login");
   };
@@ -64,7 +86,10 @@ export default function ChatPage() {
     <div className="flex flex-col h-screen bg-gray-900">
       {/* Header */}
       <div className="px-6 py-4 bg-gray-800 text-white font-semibold text-lg shadow border-b border-gray-700 flex justify-between items-center">
-        <span>🤖 AI Chatbot</span>
+        <div className="flex items-center gap-2">
+          <span>🤖 AI Chatbot</span>
+          <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`} />
+        </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleNewChat}
@@ -103,11 +128,12 @@ export default function ChatPage() {
           <MessageBubble key={i} role={msg.role} content={msg.content} />
         ))}
         {loading && (
-          <div className="flex justify-start mb-3">
-            <div className="bg-gray-700 text-gray-300 px-4 py-2 rounded-2xl rounded-bl-none text-sm flex items-center gap-2">
-              <span className="animate-pulse">●</span>
-              <span className="animate-pulse delay-100">●</span>
-              <span className="animate-pulse delay-200">●</span>
+          <div className="flex flex-col items-start mb-4">
+            <span className="text-xs text-gray-500 mb-1 px-1">🤖 AI · typing</span>
+            <div className="bg-gray-700 text-gray-300 px-4 py-3 rounded-2xl rounded-bl-none text-sm flex items-center gap-1">
+              <span className="animate-bounce">●</span>
+              <span className="animate-bounce" style={{ animationDelay: "0.1s" }}>●</span>
+              <span className="animate-bounce" style={{ animationDelay: "0.2s" }}>●</span>
             </div>
           </div>
         )}
