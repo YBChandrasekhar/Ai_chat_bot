@@ -100,6 +100,11 @@ export default function ChatPage() {
             + New Chat
           </button>
           <span className="text-sm text-gray-400">Hi, {user?.name}</span>
+          {user?.role === "admin" && (
+            <button onClick={() => router.push("/admin")} className="text-sm px-3 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded-lg">
+              🛡️ Admin
+            </button>
+          )}
           <button
             onClick={handleLogout}
             className="text-sm px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg"

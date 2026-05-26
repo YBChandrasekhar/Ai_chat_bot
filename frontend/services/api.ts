@@ -26,3 +26,8 @@ export const updatePreferences = (data: { theme: string; chatbotName: string; ca
 
 export const rateMessage = (messageId: string, rating: "like" | "dislike") =>
   API.put(`/preferences/rate/${messageId}`, { rating });
+
+export const getAdminAnalytics = () => API.get("/admin/analytics");
+export const getAdminUsers = () => API.get("/admin/users");
+export const toggleUserStatus = (userId: string) => API.put(`/admin/users/${userId}/toggle`);
+export const makeAdmin = (userId: string) => API.put(`/admin/users/${userId}/make-admin`);

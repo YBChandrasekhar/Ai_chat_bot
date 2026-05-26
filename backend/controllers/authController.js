@@ -19,7 +19,7 @@ const register = async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, password: hashed });
 
-    res.status(201).json({ token: generateToken(user._id), user: { id: user._id, name: user.name, email: user.email } });
+    res.status(201).json({ token: generateToken(user._id), user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -37,7 +37,9 @@ const login = async (req, res) => {
     if (!match)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    res.json({ token: generateToken(user._id), user: { id: user._id, name: user.name, email: user.email } });
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+
+    res.json({ token: generateToken(user._id), user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
