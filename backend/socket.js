@@ -5,7 +5,6 @@ const Session = require("./models/Session");
 const { getAIResponse } = require("./services/aiService");
 
 module.exports = (io) => {
-  // Auth middleware for socket
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token;
@@ -26,8 +25,8 @@ module.exports = (io) => {
         if (!content?.trim()) return;
 
         const userId = socket.user._id;
+        const category = socket.user.preferences?.category || "casual";
 
-        // Get or create session
         let session = sessionId
           ? await Session.findById(sessionId)
           : await Session.create({ userId, title: content.slice(0, 30) });
@@ -37,7 +36,6 @@ module.exports = (io) => {
           return;
         }
 
-        // Save user message
         const userMessage = await Message.create({
           userId,
           sessionId: session._id,
@@ -46,26 +44,21 @@ module.exports = (io) => {
         });
         session.messages.push(userMessage._id);
 
-        // Emit user message back
         socket.emit("userMessage", {
           content: userMessage.content,
           sessionId: session._id,
         });
 
-        // Emit typing indicator
         socket.emit("aiTyping", true);
 
-        // Build history
         const history = await Message.find({ sessionId: session._id }).sort("createdAt");
         const messages = history.map((m) => ({
           role: m.role === "ai" ? "assistant" : "user",
           content: m.content,
         }));
 
-        // Get AI response
-        const aiContent = await getAIResponse(messages);
+        const aiContent = await getAIResponse(messages, category);
 
-        // Save AI message
         const aiMessage = await Message.create({
           userId,
           sessionId: session._id,
@@ -80,6 +73,7 @@ module.exports = (io) => {
         socket.emit("aiMessage", {
           content: aiContent,
           sessionId: session._id,
+          messageId: aiMessage._id,
         });
       } catch (err) {
         socket.emit("aiTyping", false);

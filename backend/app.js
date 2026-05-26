@@ -9,6 +9,7 @@ app.use(express.json());
 
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/chat", require("./routes/chat"));
+app.use("/api/preferences", require("./routes/preferences"));
 
 app.get("/", (req, res) => res.json({ message: "Chatbot API running" }));
 
