@@ -17,10 +17,11 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!token) { router.push("/login"); return; }
     getPreferences().then((res) => {
-      setTheme(res.data.preferences.theme);
-      setChatbotName(res.data.preferences.chatbotName);
-      setCategory(res.data.preferences.category);
-    });
+      const prefs = res.data.preferences || {};
+      setTheme(prefs.theme || "dark");
+      setChatbotName(prefs.chatbotName || "AI Assistant");
+      setCategory(prefs.category || "casual");
+    }).catch(() => router.push("/chat"));
   }, [token, router]);
 
   const handleSave = async () => {

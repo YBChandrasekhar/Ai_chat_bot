@@ -65,6 +65,7 @@ export default function RegisterPage() {
             autoComplete="new-password"
             className="px-4 py-3 bg-gray-700 text-white placeholder-gray-400 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           />
+          <p className="text-xs text-gray-500">Password must have uppercase, lowercase and number (min 6 chars)</p>
           <button
             type="submit"
             disabled={loading}
