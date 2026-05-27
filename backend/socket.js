@@ -10,7 +10,10 @@ module.exports = (io) => {
       const token = socket.handshake.auth.token;
       if (!token) return next(new Error("Not authorized"));
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      socket.user = await User.findById(decoded.id).select("-password");
+      const user = await User.findById(decoded.id).select("-password");
+      if (!user) return next(new Error("User not found"));
+      if (!user.isActive) return next(new Error("Account deactivated"));
+      socket.user = user;
       next();
     } catch {
       next(new Error("Token invalid"));
@@ -18,7 +21,7 @@ module.exports = (io) => {
   });
 
   io.on("connection", (socket) => {
-    console.log(`User connected: ${socket.user?.name}`);
+    console.log(`✅ Connected: ${socket.user?.name}`);
 
     socket.on("sendMessage", async ({ content, sessionId }) => {
       try {
@@ -40,9 +43,10 @@ module.exports = (io) => {
           userId,
           sessionId: session._id,
           role: "user",
-          content,
+          content: content.trim(),
         });
         session.messages.push(userMessage._id);
+        await session.save();
 
         socket.emit("userMessage", {
           content: userMessage.content,
@@ -51,7 +55,7 @@ module.exports = (io) => {
 
         socket.emit("aiTyping", true);
 
-        const history = await Message.find({ sessionId: session._id }).sort("createdAt");
+        const history = await Message.find({ sessionId: session._id }).sort("createdAt").lean();
         const messages = history.map((m) => ({
           role: m.role === "ai" ? "assistant" : "user",
           content: m.content,
@@ -68,7 +72,6 @@ module.exports = (io) => {
         session.messages.push(aiMessage._id);
         await session.save();
 
-        // Stop typing & emit AI response
         socket.emit("aiTyping", false);
         socket.emit("aiMessage", {
           content: aiContent,
@@ -76,13 +79,14 @@ module.exports = (io) => {
           messageId: aiMessage._id,
         });
       } catch (err) {
+        console.error("Socket error:", err.message);
         socket.emit("aiTyping", false);
-        socket.emit("error", { message: err.message });
+        socket.emit("error", { message: "Failed to get AI response. Please try again." });
       }
     });
 
     socket.on("disconnect", () => {
-      console.log(`User disconnected: ${socket.user?.name}`);
+      console.log(`❌ Disconnected: ${socket.user?.name}`);
     });
   });
 };

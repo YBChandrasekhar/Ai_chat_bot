@@ -4,6 +4,10 @@ const Message = require("../models/Message");
 const getPreferences = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select("preferences name email");
+    if (!user.preferences) {
+      user.preferences = { theme: "dark", chatbotName: "AI Assistant", category: "casual" };
+      await user.save();
+    }
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: err.message });
