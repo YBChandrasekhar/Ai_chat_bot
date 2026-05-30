@@ -22,20 +22,29 @@ export default function ChatPage() {
   const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { user, token, logout } = useAuth();
+  const { loading: authLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    if (authLoading) return;
     if (!token) { router.push("/login"); return; }
 
     const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000", {
       auth: { token },
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
     });
 
     socketRef.current = socket;
 
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
+    socket.on("connect_error", (err) => {
+      console.error("Socket connection error:", err.message);
+      setConnected(false);
+    });
 
     socket.on("userMessage", ({ sessionId: sid }) => {
       setSessionId(sid);
@@ -81,7 +90,11 @@ export default function ChatPage() {
     router.push("/login");
   };
 
-  if (!token) return null;
+  if (!token) return (
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="text-white text-sm">Loading...</div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-screen bg-gray-900">
