@@ -27,7 +27,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (!token) { router.push("/login"); return; }
 
-    const socket = io("http://localhost:5000", {
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000", {
       auth: { token },
       transports: ["websocket"],
     });
