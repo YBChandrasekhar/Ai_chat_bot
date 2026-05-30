@@ -15,6 +15,9 @@ const io = new Server(server, {
     origin: [
       "http://localhost:3000",
       "http://localhost:3001",
+      "https://ai-chat-bot-beta-six.vercel.app",
+      "https://ai-chat-bot-six-gamma.vercel.app",
+      "https://ai-chat-bot-git-master-ybchandrasekhars-projects.vercel.app",
       process.env.CLIENT_URL,
     ].filter(Boolean),
     methods: ["GET", "POST"],
